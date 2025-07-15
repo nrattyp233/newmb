@@ -14,6 +14,11 @@
     "SQUARE_ENVIRONMENT": "production",
     "NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN": "@mapbox-access-token",
     "DATABASE_URL": "@database-url",
+    "SUPABASE_URL": "@supabase-url",
+    "SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase-service-role-key",
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key",
     "GOOGLE_GENERATIVE_AI_API_KEY": "@google-ai-api-key",
     "NEXTAUTH_SECRET": "@nextauth-secret",
     "NEXTAUTH_URL": "@nextauth-url"
