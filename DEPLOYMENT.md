@@ -1,10 +1,10 @@
 # Money Buddy - Production Deployment Guide
 
-This guide covers deploying Money Buddy to production with Supabase database, Mapbox geofencing, Square payments, and all integrated services.
+This guide covers deploying Money Buddy to production with Neon database, Mapbox geofencing, Square payments, and all integrated services.
 
 ## 🚀 Quick Deployment Checklist
 
-- [ ] Supabase project created and configured
+- [ ] Neon database project created and configured
 - [ ] Mapbox access token obtained
 - [ ] Square payment credentials configured
 - [ ] Google AI API key set up
@@ -17,6 +17,35 @@ This guide covers deploying Money Buddy to production with Supabase database, Ma
 ## 📋 Prerequisites
 
 ### Required Accounts & Services
+
+1. **Neon Database** (Primary Database)
+   - Sign up at [console.neon.tech](https://console.neon.tech/)
+   - Create production database
+   - Note: Free tier includes 0.5GB storage, paid plans available
+
+2. **Vercel** (Deployment Platform)
+   - Sign up at [vercel.com](https://vercel.com/)
+   - Connect GitHub repository
+   - Free tier includes 100GB bandwidth
+
+3. **Stack Auth** (Authentication)
+   - Sign up at [stack-auth.com](https://stack-auth.com/)
+   - Create new project
+   - Get API keys
+
+4. **Square** (Payment Processing)
+   - Sign up at [squareup.com/developers](https://squareup.com/us/en/developers)
+   - Create production application
+   - Get API credentials
+
+5. **Google AI Studio** (AI Assistant)
+   - Get API key from [aistudio.google.com](https://aistudio.google.com/app/apikey)
+   - Free tier includes generous usage limits
+
+6. **Mapbox** (Geofencing & Maps)
+   - Sign up at [mapbox.com](https://account.mapbox.com/)
+   - Create access token
+   - Free tier includes 50,000 map loads/month
 
 1. **Vercel Account** - For hosting and deployment
 2. **Supabase Account** - For production database

@@ -17,9 +17,9 @@ export default function AdminPage() {
       icon: CreditCard,
     },
     {
-      name: "Database",
-      status: process.env.DATABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL ? "configured" : "pending",
-      description: "User data and transactions",
+      name: "Neon Database",
+      status: process.env.DATABASE_URL ? "configured" : "pending",
+      description: "Primary database for user data and transactions",
       icon: Database,
     },
     {

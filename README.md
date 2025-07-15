@@ -4,6 +4,7 @@ Your friendly financial companion! A modern banking application with geofencing,
 
 ## 🌟 Features
 
+- **Neon Database**: Lightning-fast serverless PostgreSQL database
 - **Real Money Processing**: Square payment integration for deposits and withdrawals
 - **Mapbox Geofencing**: Location-based transfer restrictions
 - **Time-Restricted Transfers**: Set expiration times for money transfers
@@ -12,6 +13,7 @@ Your friendly financial companion! A modern banking application with geofencing,
 - **Modern UI**: Purple/blue gradient theme with glassmorphism effects
 - **Mobile Responsive**: Optimized for all devices
 - **Bank-Grade Security**: Multi-factor authentication and encryption
+- **Production Ready**: Full deployment setup with monitoring and error handling
 
 ## 🚀 Quick Start
 
@@ -19,171 +21,239 @@ Your friendly financial companion! A modern banking application with geofencing,
 
 - Node.js 18.17.0 or higher
 - npm or yarn
+- Neon Database Account
 - Square Developer Account
 - Mapbox Account
 - Google AI API Key
-- Database (PostgreSQL/Neon)
+- Vercel Account (for deployment)
 
-### Installation
+### Local Development
 
 1. **Clone the repository**
-   \`\`\`bash
+   ```bash
    git clone https://github.com/your-username/money-buddy.git
    cd money-buddy
-   \`\`\`
+   ```
 
 2. **Install dependencies**
-   \`\`\`bash
+   ```bash
    npm install
-   \`\`\`
+   ```
 
 3. **Set up environment variables**
-   \`\`\`bash
-   cp .env.example .env.local
-   \`\`\`
+   ```bash
+   cp .env.production.template .env.local
+   ```
    
    Fill in your API keys and configuration:
-   \`\`\`env
+   ```env
+   # Neon Database (Primary)
+   DATABASE_URL=your_neon_database_url
+   
    # Square Payment Processing
    SQUARE_ACCESS_TOKEN=your_square_access_token
    SQUARE_APPLICATION_ID=your_square_application_id
    SQUARE_ENVIRONMENT=sandbox
    
-   # Mapbox Configuration
+   # Mapbox Geofencing
    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_token
    
-   # Database
-   DATABASE_URL=your_database_url
+   # Google AI Assistant
+   GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_key
    
-   # AI Configuration
-   GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
-   \`\`\`
+   # Authentication
+   NEXT_PUBLIC_STACK_PROJECT_ID=your_stack_project_id
+   NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=your_stack_key
+   STACK_SECRET_SERVER_KEY=your_stack_secret
+   ```
 
-4. **Set up the database**
-   \`\`\`bash
-   # Run the SQL scripts in the scripts/ folder
-   npm run db:setup
-   \`\`\`
+4. **Initialize the database**
+   ```bash
+   npm run dev
+   # Visit http://localhost:3000/api/neon-test to initialize
+   ```
 
 5. **Start the development server**
-   \`\`\`bash
+   ```bash
    npm run dev
-   \`\`\`
+   ```
 
-6. **Open your browser**
-   Navigate to `http://localhost:3000`
+6. **Visit the application**
+   - Main app: http://localhost:3000
+   - Demo page: http://localhost:3000/demo
+   - Admin dashboard: http://localhost:3000/admin
 
-## 🏗️ Production Deployment
+## 🔧 Production Deployment
 
-### Deploy to Vercel
+### Quick Deploy to Vercel
 
-1. **Install Vercel CLI**
-   \`\`\`bash
-   npm i -g vercel
-   \`\`\`
+1. **Prepare for deployment**
+   ```bash
+   npm run build  # Test build locally
+   ```
 
-2. **Deploy**
-   \`\`\`bash
+2. **Deploy to Vercel**
+   ```bash
+   npm install -g vercel
+   vercel login
    vercel --prod
-   \`\`\`
+   ```
 
-3. **Set environment variables in Vercel dashboard**
-   - Go to your project settings
-   - Add all production environment variables
-   - Redeploy
+3. **Set up environment variables in Vercel Dashboard**
+   - Go to your project → Settings → Environment Variables
+   - Add all production variables from `.env.production.template`
 
-### Environment Variables for Production
+4. **Initialize production database**
+   - Visit `https://your-app.vercel.app/api/neon-test`
+   - This will create tables and seed initial data
 
-\`\`\`env
-# Production Square API
-SQUARE_ACCESS_TOKEN=your_production_token
-SQUARE_APPLICATION_ID=your_production_app_id
-SQUARE_ENVIRONMENT=production
+### Comprehensive Deployment Guide
 
-# Production Database
-DATABASE_URL=your_production_database_url
+For detailed production setup, see:
+- 📋 [Production Checklist](./PRODUCTION-CHECKLIST.md)
+- 📖 [Deployment Guide](./DEPLOYMENT.md)
+- 🔧 [Environment Setup](./docs/environment-setup.md)
 
-# Other production variables...
-\`\`\`
+## 🏗️ Architecture
 
-## 📱 API Endpoints
+### Tech Stack
 
-- `POST /api/square/deposit` - Process deposits
-- `POST /api/square/withdraw` - Process withdrawals
-- `POST /api/chat` - AI assistant chat
-- `GET /api/transactions` - Get transaction history
-- `POST /api/transfer` - Create transfers
-- `POST /api/savings/lock` - Lock savings accounts
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Database**: Neon (Serverless PostgreSQL)
+- **Authentication**: Stack Auth
+- **Payments**: Square API
+- **Maps**: Mapbox GL JS
+- **AI**: Google Gemini API
+- **Styling**: Tailwind CSS, shadcn/ui
+- **Deployment**: Vercel
 
-## 🔧 Configuration
+### Project Structure
 
-### Square Setup
-1. Create Square Developer account
-2. Get sandbox/production credentials
-3. Configure webhook endpoints
-4. Test with provided test card numbers
+```
+money-buddy/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── auth/              # Authentication pages
+│   ├── dashboard/         # Main dashboard
+│   ├── demo/              # Demo page
+│   └── ...
+├── components/            # Reusable components
+│   ├── ui/               # shadcn/ui components
+│   └── ...
+├── lib/                   # Utility libraries
+│   ├── neon.ts           # Database operations
+│   ├── error-handler.ts  # Error handling
+│   └── ...
+├── docs/                  # Documentation
+├── scripts/              # Build and deployment scripts
+└── ...
+```
 
-### Mapbox Setup
-1. Create Mapbox account
-2. Get access token
-3. Configure for geofencing features
+## 📊 API Endpoints
 
-### Database Setup
-1. Run migration scripts
-2. Seed initial data
-3. Configure connection pooling
+### Database
+- `GET /api/neon-test` - Test database connection and setup
+- `GET /api/health` - Health check for monitoring
+- `GET /api/db-info` - Database information
 
-## 🛡️ Security Features
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
 
-- **PCI DSS Compliance**: Square payment processing
-- **Data Encryption**: All sensitive data encrypted
-- **Secure Headers**: HSTS, CSP, and security headers
-- **Input Validation**: All inputs sanitized and validated
-- **Rate Limiting**: API endpoints protected
-- **HTTPS Only**: SSL/TLS encryption required
+### Payments
+- `POST /api/square/deposit` - Process deposit
+- `POST /api/square/withdraw` - Process withdrawal
+- `POST /api/webhooks/square` - Square webhook handler
 
-## 🎨 Design System
+### AI Assistant
+- `POST /api/chat` - AI chat interface
 
-- **Colors**: Purple/blue gradient with lime green accents
-- **Typography**: Modern, readable fonts with proper contrast
-- **Components**: Reusable shadcn/ui components
-- **Responsive**: Mobile-first design approach
-- **Accessibility**: WCAG 2.1 AA compliant
+## 🔐 Security Features
 
-## 📊 Monitoring
+- **Environment Variable Validation**: Required variables checked on startup
+- **Rate Limiting**: 100 requests per minute per IP
+- **Error Handling**: Comprehensive error responses
+- **HTTPS Only**: Secure cookie settings
+- **Input Validation**: All inputs validated and sanitized
+- **Database Security**: Parameterized queries, connection pooling
 
-- **Error Tracking**: Built-in error handling
-- **Performance**: Optimized for Core Web Vitals
-- **Analytics**: User interaction tracking
-- **Logging**: Comprehensive application logs
+## 🎯 Development
+
+### Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript type checking
+npm run deploy       # Deploy to Vercel production
+```
+
+### Testing
+
+```bash
+# Test database connection
+curl http://localhost:3000/api/neon-test
+
+# Test health endpoint
+curl http://localhost:3000/api/health
+
+# Test demo page
+open http://localhost:3000/demo
+```
+
+## 🔍 Monitoring
+
+### Production Monitoring
+
+- **Health Check**: `/api/health` endpoint
+- **Database Status**: Real-time connection monitoring
+- **Error Tracking**: Comprehensive error handling
+- **Performance**: Built-in monitoring capabilities
+
+### Key Metrics
+
+- Database response time
+- API endpoint performance
+- Error rates and types
+- User activity and engagement
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+1. **Database Connection**: Check Neon database URL and credentials
+2. **Build Errors**: Run `npm run type-check` for TypeScript issues
+3. **API Errors**: Check environment variables in Vercel dashboard
+4. **Rate Limiting**: Implement proper caching strategies
+
+### Getting Help
+
+- 📧 [Issues](https://github.com/your-username/money-buddy/issues)
+- 📖 [Documentation](./docs/)
+- 🚀 [Deployment Guide](./DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Add tests if applicable
 5. Submit a pull request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
-- **Documentation**: Check the `/docs` folder
-- **Issues**: Create a GitHub issue
-- **Email**: support@money-buddy.com
-- **Discord**: Join our community server
-
 ## 🙏 Acknowledgments
 
-- **Square**: Payment processing platform
-- **Mapbox**: Mapping and geofencing services
-- **Google AI**: Gemini AI assistant
-- **Vercel**: Hosting and deployment
-- **shadcn/ui**: UI component library
+- [Neon](https://neon.tech/) for serverless PostgreSQL
+- [Square](https://squareup.com/) for payment processing
+- [Mapbox](https://mapbox.com/) for geofencing capabilities
+- [Google AI](https://ai.google.com/) for AI assistant
+- [Vercel](https://vercel.com/) for deployment platform
 
 ---
 
-Made with ❤️ by the Money Buddy team 🐵
+Made with 💖 by the Money Buddy team

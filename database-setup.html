@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Buddy Database Setup</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .sql-code { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; }
+        .step { margin: 20px 0; }
+        .step h3 { color: #2563eb; }
+        .copy-btn { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .copy-btn:hover { background: #2563eb; }
+        .success { color: #059669; }
+        .warning { color: #d97706; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Money Buddy Database Setup</h1>
+    <p>Follow these steps to set up your Supabase database with real data:</p>
+
+    <div class="step">
+        <h3>Step 1: Open Supabase Dashboard</h3>
+        <p>Go to: <a href="https://supabase.com/dashboard/project/qzjpfwlozokftkgixte" target="_blank">https://supabase.com/dashboard/project/qzjpfwlozokftkgixte</a></p>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Open SQL Editor</h3>
+        <p>Click on <strong>"SQL Editor"</strong> in the left sidebar</p>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Copy and Paste This SQL</h3>
+        <div class="container">
+            <div class="sql-code" id="sql-content">-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    balance DECIMAL(12, 2) DEFAULT 0.00,
+    savings_balance DECIMAL(12, 2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create accounts table
+CREATE TABLE IF NOT EXISTS accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_number VARCHAR(20) UNIQUE NOT NULL,
+    account_type VARCHAR(20) NOT NULL DEFAULT 'checking',
+    balance DECIMAL(12, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
+    type VARCHAR(20) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL,
+    fee DECIMAL(12, 2) DEFAULT 0.00,
+    description TEXT,
+    recipient_email VARCHAR(255),
+    recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    square_payment_id VARCHAR(255),
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert test user
+INSERT INTO users (email, name, phone, balance, savings_balance) 
+VALUES ('test@moneybuddy.com', 'Test User', '+1234567890', 1000.00, 500.00)
+ON CONFLICT (email) DO NOTHING;
+
+-- Insert test account
+INSERT INTO accounts (user_id, account_number, account_type, balance)
+SELECT id, '1234567890', 'checking', 1000.00
+FROM users WHERE email = 'test@moneybuddy.com'
+ON CONFLICT (account_number) DO NOTHING;
+
+-- Insert sample transactions
+INSERT INTO transactions (user_id, account_id, type, amount, fee, description, status)
+SELECT 
+    u.id,
+    a.id,
+    'deposit',
+    500.00,
+    2.50,
+    'Initial deposit',
+    'completed'
+FROM users u
+JOIN accounts a ON u.id = a.user_id
+WHERE u.email = 'test@moneybuddy.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO transactions (user_id, account_id, type, amount, fee, description, status)
+SELECT 
+    u.id,
+    a.id,
+    'withdrawal',
+    100.00,
+    1.50,
+    'ATM withdrawal',
+    'completed'
+FROM users u
+JOIN accounts a ON u.id = a.user_id
+WHERE u.email = 'test@moneybuddy.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO transactions (user_id, account_id, type, amount, fee, description, status)
+SELECT 
+    u.id,
+    a.id,
+    'transfer',
+    200.00,
+    0.00,
+    'Transfer to savings',
+    'completed'
+FROM users u
+JOIN accounts a ON u.id = a.user_id
+WHERE u.email = 'test@moneybuddy.com'
+ON CONFLICT DO NOTHING;</div>
+            <button class="copy-btn" onclick="copyToClipboard()">📋 Copy SQL to Clipboard</button>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>Step 4: Run the SQL</h3>
+        <p>Click <strong>"Run"</strong> or press <strong>Ctrl+Enter</strong> to execute the SQL</p>
+    </div>
+
+    <div class="step">
+        <h3>Step 5: Test Your App</h3>
+        <p>Once the SQL runs successfully, go back to your app:</p>
+        <ul>
+            <li>Visit <a href="http://localhost:3000/admin" target="_blank">http://localhost:3000/admin</a> to verify database status</li>
+            <li>Visit <a href="http://localhost:3000/dashboard" target="_blank">http://localhost:3000/dashboard</a> to see the app with real data</li>
+            <li>Test user email: <strong>test@moneybuddy.com</strong></li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h3 class="success">✅ What This Setup Creates:</h3>
+        <ul>
+            <li>Users table with test user (balance: $1000)</li>
+            <li>Accounts table with checking account</li>
+            <li>Transactions table with sample transactions</li>
+            <li>Proper foreign key relationships</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h3 class="warning">⚠️ Important Notes:</h3>
+        <ul>
+            <li>This creates the basic schema for your Money Buddy app</li>
+            <li>The test user has a $1000 balance and sample transactions</li>
+            <li>You can expand this with more features as needed</li>
+        </ul>
+    </div>
+
+    <script>
+        function copyToClipboard() {
+            const sqlContent = document.getElementById('sql-content').textContent;
+            navigator.clipboard.writeText(sqlContent).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = '📋 Copy SQL to Clipboard';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
