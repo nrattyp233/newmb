@@ -38,83 +38,42 @@ async function setupDatabase() {
     console.log('📊 Supabase URL:', supabaseUrl);
     console.log('');
 
-    // Create users table
-    console.log('Creating users table...');
-    const { error: usersError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS users (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          email VARCHAR(255) UNIQUE NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          phone VARCHAR(20),
-          balance DECIMAL(12, 2) DEFAULT 0.00,
-          savings_balance DECIMAL(12, 2) DEFAULT 0.00,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
+    // First, let's check if we can connect to the database
+    console.log('Testing database connection...');
+    const { data: testData, error: testError } = await supabase
+      .from('information_schema.tables')
+      .select('table_name')
+      .limit(1);
 
-    if (usersError) {
-      console.error('❌ Error creating users table:', usersError.message);
-    } else {
-      console.log('✅ Users table created successfully');
+    if (testError) {
+      console.error('❌ Database connection failed:', testError.message);
+      console.log('');
+      console.log('🔧 Manual setup required:');
+      console.log('1. Go to https://supabase.com/dashboard/project/qzjpfwlozokftkgixte');
+      console.log('2. Click on "SQL Editor" in the sidebar');
+      console.log('3. Copy and paste the SQL from scripts/supabase-setup.sql');
+      console.log('4. Run the SQL to create the tables');
+      console.log('');
+      return;
     }
 
-    // Create accounts table
-    console.log('Creating accounts table...');
-    const { error: accountsError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS accounts (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          account_number VARCHAR(20) UNIQUE NOT NULL,
-          account_type VARCHAR(20) NOT NULL DEFAULT 'checking',
-          balance DECIMAL(12, 2) DEFAULT 0.00,
-          is_active BOOLEAN DEFAULT true,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
+    console.log('✅ Database connection successful');
 
-    if (accountsError) {
-      console.error('❌ Error creating accounts table:', accountsError.message);
+    // Check if users table exists
+    const { data: existingTables, error: tableError } = await supabase
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .in('table_name', ['users', 'accounts', 'transactions']);
+
+    if (tableError) {
+      console.error('❌ Error checking existing tables:', tableError.message);
     } else {
-      console.log('✅ Accounts table created successfully');
+      console.log('Existing tables:', existingTables?.map(t => t.table_name) || []);
     }
 
-    // Create transactions table
-    console.log('Creating transactions table...');
-    const { error: transactionsError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS transactions (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
-          type VARCHAR(20) NOT NULL,
-          amount DECIMAL(12, 2) NOT NULL,
-          fee DECIMAL(12, 2) DEFAULT 0.00,
-          description TEXT,
-          recipient_email VARCHAR(255),
-          recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
-          status VARCHAR(20) DEFAULT 'pending',
-          square_payment_id VARCHAR(255),
-          metadata JSONB,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
-
-    if (transactionsError) {
-      console.error('❌ Error creating transactions table:', transactionsError.message);
-    } else {
-      console.log('✅ Transactions table created successfully');
-    }
-
-    // Test the setup by inserting a test user
-    console.log('Creating test user...');
+    // Test inserting a user directly
+    console.log('Testing user insertion...');
     const { data: testUser, error: testUserError } = await supabase
       .from('users')
       .insert([
@@ -131,13 +90,14 @@ async function setupDatabase() {
 
     if (testUserError) {
       console.error('❌ Error creating test user:', testUserError.message);
+      console.log('');
+      console.log('🔧 This likely means the database tables need to be created first.');
+      console.log('Please follow the manual setup instructions above.');
     } else {
       console.log('✅ Test user created successfully');
       console.log('User ID:', testUser.id);
-    }
 
-    // Create a test account for the user
-    if (testUser) {
+      // Test creating an account
       console.log('Creating test account...');
       const { data: testAccount, error: testAccountError } = await supabase
         .from('accounts')
@@ -157,46 +117,46 @@ async function setupDatabase() {
       } else {
         console.log('✅ Test account created successfully');
         console.log('Account ID:', testAccount.id);
-      }
 
-      // Add some sample transactions
-      console.log('Creating sample transactions...');
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert([
-          {
-            user_id: testUser.id,
-            account_id: testAccount?.id,
-            type: 'deposit',
-            amount: 500.00,
-            fee: 2.50,
-            description: 'Initial deposit',
-            status: 'completed'
-          },
-          {
-            user_id: testUser.id,
-            account_id: testAccount?.id,
-            type: 'withdrawal',
-            amount: 100.00,
-            fee: 1.50,
-            description: 'ATM withdrawal',
-            status: 'completed'
-          },
-          {
-            user_id: testUser.id,
-            account_id: testAccount?.id,
-            type: 'transfer',
-            amount: 200.00,
-            fee: 0.00,
-            description: 'Transfer to savings',
-            status: 'completed'
-          }
-        ]);
+        // Add some sample transactions
+        console.log('Creating sample transactions...');
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert([
+            {
+              user_id: testUser.id,
+              account_id: testAccount.id,
+              type: 'deposit',
+              amount: 500.00,
+              fee: 2.50,
+              description: 'Initial deposit',
+              status: 'completed'
+            },
+            {
+              user_id: testUser.id,
+              account_id: testAccount.id,
+              type: 'withdrawal',
+              amount: 100.00,
+              fee: 1.50,
+              description: 'ATM withdrawal',
+              status: 'completed'
+            },
+            {
+              user_id: testUser.id,
+              account_id: testAccount.id,
+              type: 'transfer',
+              amount: 200.00,
+              fee: 0.00,
+              description: 'Transfer to savings',
+              status: 'completed'
+            }
+          ]);
 
-      if (transactionError) {
-        console.error('❌ Error creating sample transactions:', transactionError.message);
-      } else {
-        console.log('✅ Sample transactions created successfully');
+        if (transactionError) {
+          console.error('❌ Error creating sample transactions:', transactionError.message);
+        } else {
+          console.log('✅ Sample transactions created successfully');
+        }
       }
     }
 
