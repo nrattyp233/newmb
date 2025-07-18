@@ -1,7 +1,8 @@
+// lib/neon.ts
 import { neon } from '@neondatabase/serverless';
 
 // Database connection
-const sql = neon(process.env.DATABASE_URL!);
+const sql = neon(process.env.DATABASE_URL!); // This should now correctly pull from Vercel's DATABASE_URL
 
 // Types
 export interface User {
@@ -49,11 +50,60 @@ export class NeonDB {
     }
   }
 
+  // --- NEW METHOD: Get a specific user by ID ---
+  static async getUserById(userId: string): Promise<User | null> {
+    try {
+      const result = await sql`
+        SELECT * FROM users
+        WHERE id = ${userId}
+        LIMIT 1
+      `;
+      return result.length > 0 ? result[0] as User : null;
+    } catch (error) {
+      console.error(`Error fetching user with ID ${userId}:`, error);
+      return null;
+    }
+  }
+
+  // --- NEW METHOD: Get accounts for a specific user ---
+  static async getAccountsByUserId(userId: string): Promise<Account[] | null> {
+    try {
+      const result = await sql`
+        SELECT * FROM accounts
+        WHERE user_id = ${userId}
+        ORDER BY account_type DESC
+      `;
+      return result as Account[];
+    } catch (error) {
+      console.error(`Error fetching accounts for user ID ${userId}:`, error);
+      return null;
+    }
+  }
+
+  // --- MODIFIED: Get transactions for a specific user ---
+  static async getTransactionsByUserId(userId: string, limit: number = 10): Promise<Transaction[] | null> {
+    try {
+      const result = await sql`
+        SELECT t.*, u.name as user_name
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.user_id = ${userId}
+        ORDER BY t.created_at DESC
+        LIMIT ${limit}
+      `;
+      return result as Transaction[];
+    } catch (error) {
+      console.error(`Error fetching transactions for user ID ${userId}:`, error);
+      return null;
+    }
+  }
+
+  // Keep original getUsers if it's used elsewhere (or remove if only getUserById is needed)
   static async getUsers(limit: number = 10): Promise<User[] | null> {
     try {
       const result = await sql`
-        SELECT * FROM users 
-        ORDER BY created_at DESC 
+        SELECT * FROM users
+        ORDER BY created_at DESC
         LIMIT ${limit}
       `;
       return result as User[];
@@ -63,21 +113,6 @@ export class NeonDB {
     }
   }
 
-  static async getTransactions(limit: number = 10): Promise<Transaction[] | null> {
-    try {
-      const result = await sql`
-        SELECT t.*, u.name as user_name 
-        FROM transactions t
-        JOIN users u ON t.user_id = u.id
-        ORDER BY t.created_at DESC 
-        LIMIT ${limit}
-      `;
-      return result as Transaction[];
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      return null;
-    }
-  }
 
   static async initializeSchema() {
     try {
@@ -158,7 +193,7 @@ export class NeonDB {
 
       // Insert test users
       await sql`
-        INSERT INTO users (email, name) VALUES 
+        INSERT INTO users (email, name) VALUES
         ('john.doe@example.com', 'John Doe'),
         ('jane.smith@example.com', 'Jane Smith'),
         ('mike.johnson@example.com', 'Mike Johnson'),
@@ -172,7 +207,7 @@ export class NeonDB {
       // Insert test accounts
       for (const user of users) {
         await sql`
-          INSERT INTO accounts (user_id, account_type, balance) VALUES 
+          INSERT INTO accounts (user_id, account_type, balance) VALUES
           (${user.id}, 'checking', ${Math.floor(Math.random() * 5000) + 1000}),
           (${user.id}, 'savings', ${Math.floor(Math.random() * 10000) + 5000})
         `;
@@ -199,9 +234,9 @@ export class NeonDB {
           const amount = Math.floor(Math.random() * 500) + 10;
           const type = transactionTypes[Math.floor(Math.random() * transactionTypes.length)];
           const description = descriptions[Math.floor(Math.random() * descriptions.length)];
-          
+
           await sql`
-            INSERT INTO transactions (user_id, account_id, amount, transaction_type, description) 
+            INSERT INTO transactions (user_id, account_id, amount, transaction_type, description)
             VALUES (${account.user_id}, ${account.id}, ${amount}, ${type}, ${description})
           `;
         }

@@ -1,4 +1,5 @@
-"use client"
+// app/dashboard/page.tsx
+"use client" // Keep this at the very top
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,82 +8,118 @@ import { DollarSign, TrendingUp, PiggyBank, Send, MapPin, MessageCircle, Sparkle
 import { DashboardLayout } from "@/components/dashboard-layout"
 import Link from "next/link"
 
+// --- NEW IMPORTS ---
+import { NeonDB, User, Transaction, Account } from "@/lib/neon"
+// If you have a Supabase client configured to get the current user ID, import it here:
+// import { createClient } from "@/lib/supabase"; // Adjust path if needed
+
+// --- UPDATED USERDATA INTERFACE ---
 interface UserData {
-  firstName: string
-  lastName: string
-  fullName: string
-  email: string
-  phone?: string
-  balance: number
-  savingsBalance: number
-  registeredAt: string
-  lastLogin?: string
-  isLoggedIn: boolean
+  id: string; // User ID from NeonDB
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  balance: number; // From checking account
+  savingsBalance: number; // From savings account
+  registeredAt: string; // User creation date
+  lastLogin?: string;
+  isLoggedIn: boolean;
+  transactions: Transaction[]; // Array of fetched transactions
 }
 
 export default function DashboardPage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null); // For handling fetch errors
+
+  // If using Supabase for user auth, initialize client here or import from a shared utility
+  // const supabase = createClient(); // Example
 
   useEffect(() => {
-    // Load user data from storage
-    const loadUserData = () => {
+    const fetchRealUserData = async () => {
+      setIsLoading(true); // Start loading state
+      setError(null); // Clear previous errors
+
       try {
-        // Try localStorage first
-        let storedUser = localStorage.getItem("moneyBuddyUser")
+        // --- Authenticated User ID (IMPORTANT for real apps) ---
+        // In a real app, you would get the current logged-in user's ID from Supabase.
+        // For now, as a starting point to see data, let's fetch ALL users and accounts
+        // and assume the first user in the database is the one whose data we display.
+        // YOU WILL NEED TO REPLACE THIS WITH ACTUAL USER ID FETCHING FROM SUPABASE AUTH.
 
-        if (!storedUser) {
-          // Try sessionStorage as backup
-          storedUser = sessionStorage.getItem("moneyBuddyUser")
+        // Example (if fetching user from Supabase auth and then using their ID):
+        // const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // if (authError || !user) {
+        //   console.warn("No authenticated user or auth error:", authError?.message);
+        //   setError("Please log in to view real data.");
+        //   setUserData(null);
+        //   return;
+        // }
+        // const currentUserId = user.id;
+
+        // --- Fetching data from NeonDB ---
+        // Fetch users (you'll want to modify NeonDB to fetch by ID later)
+        const users = await NeonDB.getUsers(1); // Fetches a limited number of users
+        const currentUser = users ? users[0] : null; // Get the first user if available
+
+        if (!currentUser) {
+          setError("No user data found in the database. Please seed test data.");
+          setUserData(null);
+          return;
         }
 
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser)
-          setUserData(parsedUser)
-          console.log("User data loaded:", parsedUser)
-        } else {
-          // Fallback: try individual fields
-          const firstName = localStorage.getItem("userFirstName") || "Demo"
-          const lastName = localStorage.getItem("userLastName") || "User"
-          const email = localStorage.getItem("userEmail") || "demo@moneybuddy.com"
+        // Fetch accounts for the user (you'll need to implement getAccountsByUserId in NeonDB)
+        // For now, let's assume accounts are associated with the first user's ID
+        // Modify NeonDB.getAccounts or add getAccountsByUserId(userId: string)
+        // For this example, let's hardcode some balances if not fetching directly
+        // Or, if NeonDB.getAccounts provides all, filter them
+        const allAccounts = await NeonDB.getAccounts(); // You might need to add getAccounts() or filter by user_id
+        const checkingAccount = allAccounts?.find(acc => acc.user_id === currentUser.id && acc.account_type === 'checking');
+        const savingsAccount = allAccounts?.find(acc => acc.user_id === currentUser.id && acc.account_type === 'savings');
 
-          const fallbackUser: UserData = {
-            firstName,
-            lastName,
-            fullName: `${firstName} ${lastName}`,
-            email,
-            balance: 1250.75,
-            savingsBalance: 5000.0,
-            registeredAt: new Date().toISOString(),
-            isLoggedIn: true,
-          }
+        // Fetch transactions for the user (you'll need to modify getTransactions to filter by user_id)
+        // For this example, let's fetch all and filter by the current user's ID
+        const allTransactions = await NeonDB.getTransactions();
+        const userTransactions = allTransactions?.filter(tx => tx.user_id === currentUser.id) || [];
 
-          setUserData(fallbackUser)
-          // Save the fallback data
-          localStorage.setItem("moneyBuddyUser", JSON.stringify(fallbackUser))
-          console.log("Fallback user data created:", fallbackUser)
-        }
-      } catch (error) {
-        console.error("Error loading user data:", error)
-        // Ultimate fallback
-        const defaultUser: UserData = {
-          firstName: "Money",
-          lastName: "Buddy",
-          fullName: "Money Buddy",
-          email: "user@moneybuddy.com",
-          balance: 1250.75,
-          savingsBalance: 5000.0,
+        setUserData({
+          id: currentUser.id,
+          firstName: currentUser.name.split(' ')[0] || 'User',
+          lastName: currentUser.name.split(' ')[1] || '',
+          fullName: currentUser.name,
+          email: currentUser.email,
+          balance: checkingAccount?.balance || 0.00, // Use fetched checking balance
+          savingsBalance: savingsAccount?.balance || 0.00, // Use fetched savings balance
+          registeredAt: currentUser.created_at,
+          isLoggedIn: true,
+          transactions: userTransactions, // Use fetched transactions
+        });
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load data.");
+        // Fallback to a default user on error, so the UI doesn't break
+        setUserData({
+          id: "error-fallback",
+          firstName: "Fallback",
+          lastName: "User",
+          fullName: "Fallback User",
+          email: "fallback@moneybuddy.com",
+          balance: 0.00,
+          savingsBalance: 0.00,
           registeredAt: new Date().toISOString(),
           isLoggedIn: true,
-        }
-        setUserData(defaultUser)
+          transactions: [],
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false); // End loading state
       }
-    }
+    };
 
-    loadUserData()
-  }, [])
+    fetchRealUserData();
+  }, []); // Empty dependency array means this runs once on mount
 
   if (isLoading) {
     return (
@@ -96,6 +133,29 @@ export default function DashboardPage() {
       </DashboardLayout>
     )
   }
+
+  // Handle error state display
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-96 text-red-500 text-center">
+          <p>Error loading dashboard: {error}. Please check database connection and ensure data is seeded.</p>
+          {/* You might want a refresh button or redirect here */}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!userData) { // Fallback if no user data even after loading
+    return (
+        <DashboardLayout>
+            <div className="flex items-center justify-center min-h-96 text-white text-center">
+                <p>No user data available. Please try logging in or seeding the database.</p>
+            </div>
+        </DashboardLayout>
+    );
+  }
+
 
   return (
     <DashboardLayout>
@@ -134,7 +194,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold text-purple-900 mb-2">
-                ${userData?.balance?.toLocaleString("en-US", { minimumFractionDigits: 2 }) || "1,250.75"}
+                ${userData?.balance?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </div>
               <p className="text-gray-700 font-medium flex items-center">
                 <TrendingUp className="h-4 w-4 mr-1 text-lime-500" />
@@ -152,7 +212,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold text-purple-900 mb-2">
-                ${userData?.savingsBalance?.toLocaleString("en-US", { minimumFractionDigits: 2 }) || "5,000.00"}
+                ${userData?.savingsBalance?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </div>
               <p className="text-gray-700 font-medium flex items-center">
                 <TrendingUp className="h-4 w-4 mr-1 text-lime-500" />
@@ -169,7 +229,7 @@ export default function DashboardPage() {
               <Zap className="h-6 w-6 mr-2 text-lime-500" />
               Quick Actions
             </CardTitle>
-            <CardDescription className="text-gray-700 font-medium text-lg">
+            <CardDescription className="text-gray-700 font-medium">
               What would you like to do today with Money Buddy?
             </CardDescription>
           </CardHeader>
@@ -224,53 +284,34 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-lime-50 to-green-50 border-2 border-lime-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-lime-500 rounded-full flex items-center justify-center">
-                    <Send className="h-5 w-5 text-white" />
+              {/* Render transactions from fetched data */}
+              {userData?.transactions && userData.transactions.length > 0 ? (
+                userData.transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-lime-50 to-green-50 border-2 border-lime-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {/* You might need icons based on tx.transaction_type */}
+                      <div className="w-10 h-10 bg-lime-500 rounded-full flex items-center justify-center">
+                        {tx.transaction_type === 'deposit' && <DollarSign className="h-5 w-5 text-white" />}
+                        {tx.transaction_type === 'withdrawal' && <Send className="h-5 w-5 text-white" />}
+                        {tx.transaction_type === 'transfer' && <Send className="h-5 w-5 text-white" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-purple-900">{tx.description || tx.transaction_type}</p>
+                        {/* You might want to display user_name if fetched */}
+                        <p className="text-sm text-gray-600">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ''}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${tx.transaction_type === 'deposit' ? 'text-lime-700' : 'text-red-700'}`}>
+                        {tx.transaction_type === 'deposit' ? '+' : '-'}${tx.amount?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-gray-600">{(tx.created_at ? new Date(tx.created_at) : new Date()).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-purple-900">Sent to Sarah Johnson</p>
-                    <p className="text-sm text-gray-600">Geofenced transfer • Central Park</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-purple-900">-$125.00</p>
-                  <p className="text-sm text-gray-600">2 hours ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-purple-900">Square Deposit</p>
-                    <p className="text-sm text-gray-600">Direct deposit from employer</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-purple-900">+$2,500.00</p>
-                  <p className="text-sm text-gray-600">Yesterday</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                    <PiggyBank className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-purple-900">Savings Interest</p>
-                    <p className="text-sm text-gray-600">Monthly interest payment</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-purple-900">+$21.67</p>
-                  <p className="text-sm text-gray-600">3 days ago</p>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-600">No recent transactions found.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -278,3 +319,4 @@ export default function DashboardPage() {
     </DashboardLayout>
   )
 }
+
